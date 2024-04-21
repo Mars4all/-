@@ -17,11 +17,15 @@
             width: 80%;
             margin-top: 20px;
         }
+        #status {
+            margin: 10px;
+            font-size: 1.2em;
+        }
+        .green {
+            color: green;
+        }
         .red {
             color: red;
-        }
-        .yellow {
-            color: yellow;
         }
         button {
             padding: 10px 20px;
@@ -29,19 +33,26 @@
             margin: 5px;
             cursor: pointer;
         }
+        .highlight {
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
     <h1>Bluetooth-Geräte Überwachung</h1>
     <button onclick="scanBluetooth()">Bluetooth-Geräte scannen</button>
+    <div id="status" class="red">Nicht aktiviert</div>
     <div id="results"></div>
     <audio id="alarmSound" src="alarm.mp3"></audio>
 
     <script>
-        // Wiederherstellen der Gerätelogs aus dem LocalStorage beim Laden der Seite
         const deviceLog = JSON.parse(localStorage.getItem('deviceLog')) || {};
 
         function scanBluetooth() {
+            const statusDiv = document.getElementById('status');
+            statusDiv.textContent = "Umgebung wird geprüft...";
+            statusDiv.className = 'green';
+
             navigator.bluetooth.requestDevice({ acceptAllDevices: true })
                 .then(device => {
                     const now = new Date();
@@ -50,37 +61,34 @@
                         deviceLog[deviceId] = [];
                     }
                     deviceLog[deviceId].push(now.getTime());
-                    localStorage.setItem('deviceLog', JSON.stringify(deviceLog));  // Speichern der Daten in LocalStorage
+                    localStorage.setItem('deviceLog', JSON.stringify(deviceLog));
                     updateResults();
                 })
                 .catch(error => {
                     console.error('Fehler beim Zugriff auf Bluetooth:', error);
+                    statusDiv.textContent = "Bluetooth ist nicht aktiviert.";
+                    statusDiv.className = 'red';
                 });
         }
 
         function updateResults() {
             const twelveHoursAgo = Date.now() - 12 * 60 * 60 * 1000;
             const resultsDiv = document.getElementById('results');
-            resultsDiv.innerHTML = '<h2>Überwachte Geräte:</h2>';
+            resultsDiv.innerHTML = '<h2>Überwachte Geräte:</h2><ul>';
 
             for (const [id, times] of Object.entries(deviceLog)) {
                 const recentTimes = times.filter(time => time > twelveHoursAgo);
                 const count = recentTimes.length;
-                const duration = (Math.max(...recentTimes) - Math.min(...recentTimes)) / (1000 * 60 * 60);
-                let className = '';
+                const listItem = document.createElement('li');
+                listItem.textContent = `Gerät ${id} wurde ${count} Mal erkannt.`;
 
                 if (count > 3) {
-                    className = 'red';
+                    listItem.classList.add('red');
                     playAlarm();
-                } else if (duration > 3) {
-                    className = 'yellow';
                 }
-
-                const deviceElement = document.createElement('div');
-                deviceElement.className = className;
-                deviceElement.textContent = `Gerät ${id} wurde ${count} Mal in den letzten 12 Stunden in der Nähe erkannt.`;
-                resultsDiv.appendChild(deviceElement);
+                resultsDiv.appendChild(listItem);
             }
+            resultsDiv.innerHTML += '</ul>';
         }
 
         function playAlarm() {
@@ -88,10 +96,12 @@
             alarm.play();
         }
 
-        // Initialisierung und regelmäßige Aktualisierung beim Laden der Seite
         document.addEventListener('DOMContentLoaded', function() {
-            updateResults();
-            setInterval(scanBluetooth, 60000); // 60 Sekunden Intervall
+            const statusDiv = document.getElementById('status');
+            if (!navigator.bluetooth) {
+                statusDiv.textContent = "Bluetooth ist nicht aktiviert.";
+                statusDiv.className = 'red';
+            }
         });
     </script>
 </body>
