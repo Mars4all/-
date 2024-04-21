@@ -93,15 +93,15 @@
 
         function playAlarm() {
             const alarm = document.getElementById('alarmSound');
+            if (!alarm.paused) {
+                return; // Verhindert, dass der Ton mehrfach gleichzeitig spielt
+            }
             alarm.play();
         }
 
         document.addEventListener('DOMContentLoaded', function() {
-            const statusDiv = document.getElementById('status');
-            if (!navigator.bluetooth) {
-                statusDiv.textContent = "Bluetooth ist nicht aktiviert.";
-                statusDiv.className = 'red';
-            }
+            updateResults(); // Aktualisiert die Liste beim Laden der Seite
+            setInterval(scanBluetooth, 60000); // 60 Sekunden Intervall
         });
     </script>
 </body>
